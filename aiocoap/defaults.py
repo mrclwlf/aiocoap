@@ -62,6 +62,10 @@ def get_default_clienttransports(*, loop=None, use_env=True):
     # on android it seems that it's only the AI_V4MAPPED that causes trouble,
     # that should be managable in udp6 too.
     yield 'udp6'
+
+    if not aioquic_missing_modules():
+        yield 'quicclient'
+
     return
 
 def get_default_servertransports(*, loop=None, use_env=True):
@@ -108,6 +112,10 @@ def get_default_servertransports(*, loop=None, use_env=True):
     # on android it seems that it's only the AI_V4MAPPED that causes trouble,
     # that should be managable in udp6 too.
     yield 'udp6'
+
+    if not aioquic_missing_modules():
+        yield 'quicserver'
+
     return
 
 def has_reuse_port(*, use_env=True):
@@ -210,6 +218,23 @@ def prettyprint_missing_modules():
         missing.append('pygments')
     return missing
 
+def aioquic_missing_modules():
+    """Return a list of modules that are missing in order to use aioquic
+    https://github.com/aiortc/aioquic """
+    missing = []
+    try:
+        import aioquic
+    except ImportError:
+        missing.append('aioquic')
+    try:
+        import ssl
+    except ImportError:
+        missing.append('openssl')
+    try:
+        import cryptography
+    except ImportError:
+        missing.append('crypthography')
+
 
 __all__ = [
     'get_default_clienttransports',
@@ -220,4 +245,5 @@ __all__ = [
     'ws_missing_modules',
     'linkheader_missing_modules',
     'prettyprint_missing_modules',
+    'aioquic_missing_modules',
     ]

@@ -209,6 +209,10 @@ class Context(interfaces.RequestProvider):
                 from .transports.oscore import TransportOSCORE
                 oscoretransport = TransportOSCORE(self, self)
                 self.request_interfaces.append(oscoretransport)
+            elif transportname == 'quicclient':
+                from .transports.quic import QuicClient
+                await self._append_tokenmanaged_transport(
+                    lambda tman: QuicClient.create_client_transport(loop, tman, self.log))
             else:
                 raise RuntimeError("Transport %r not know for client context creation"%transportname)
 
@@ -303,6 +307,10 @@ class Context(interfaces.RequestProvider):
                 from .transports.oscore import TransportOSCORE
                 oscoretransport = TransportOSCORE(self, self)
                 self.request_interfaces.append(oscoretransport)
+            elif transportname == 'quicserver':
+                from .transports.quic import Server
+                await self._append_tokenmanaged_transport(
+                    lambda tman: Server.create_server(bind, self.log, loop, tman))
             else:
                 raise RuntimeError("Transport %r not know for server context creation"%transportname)
 

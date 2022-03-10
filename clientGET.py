@@ -22,7 +22,12 @@ logging.basicConfig(level=logging.INFO)
 async def main():
     protocol = await Context.create_client_context()
 
-    request = Message(code=GET, uri='coap://localhost/time')
+    # request = Message(code=GET, uri='coap://localhost/time')
+    #request = Message(code=GET, uri='coap+quic://localhost:64999/time')
+    request = Message(code=GET, uri='coap+quic://localhost:64999/other/block')
+    #request = Message(code=GET, uri='coap+tcp://localhost/time')
+    # request = Message(code=GET, uri='coap+tcp://localhost/other/block')
+    # request = Message(code=GET, uri='coap://localhost/other/block')
 
     try:
         response = await protocol.request(request).response
@@ -30,7 +35,8 @@ async def main():
         print('Failed to fetch resource:')
         print(e)
     else:
-        print('Result: %s\n%r'%(response.code, response.payload))
+        # print('Result', response.code)
+        print('Result: %s\n%r' % (response.code, response.payload))
 
 if __name__ == "__main__":
     asyncio.run(main())

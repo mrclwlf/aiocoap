@@ -132,4 +132,9 @@ async def main():
     await asyncio.get_running_loop().create_future()
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+
+    except KeyboardInterrupt:
+        print("")
+        print("Goodbye cruel world!")

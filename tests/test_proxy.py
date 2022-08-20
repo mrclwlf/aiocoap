@@ -53,7 +53,7 @@ class WithProxyClient(WithClient, WithProxyServer):
 
 class TestServerWithProxy(WithProxyClient, TestServer):
     def build_request(self):
-        # this needs to be run differently because tests/server.py
+        # this needs to be run differently because tests/my_server.py
         # doesn't exactly use the high-level apis. (and that's ok because we need
         # to test the server with simple messages too.)
 

@@ -1,0 +1,10 @@
+#!/bin/bash
+
+echo TCP Connection:
+python my_client.py -p tcp -c get
+
+echo QUIC Connection:
+python my_client.py -p quic -c get
+
+echo UDP Connection:
+python my_client.py -p udp -c get

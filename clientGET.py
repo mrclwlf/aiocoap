@@ -24,10 +24,11 @@ async def main():
 
     # request = Message(code=GET, uri='coap://localhost/time')
     #request = Message(code=GET, uri='coap+quic://localhost:64999/time')
-    request = Message(code=GET, uri='coap+quic://localhost:64999/other/block')
+    #request = Message(code=GET, uri='coap+quic://localhost:64999/other/block')
     #request = Message(code=GET, uri='coap+tcp://localhost/time')
     # request = Message(code=GET, uri='coap+tcp://localhost/other/block')
     # request = Message(code=GET, uri='coap://localhost/other/block')
+    request = Message(code=GET, uri='coap+quic://localhost:64999/example')
 
     try:
         response = await protocol.request(request).response

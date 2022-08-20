@@ -11,9 +11,9 @@ from aiocoap.transports import tcp
 from aioquic.asyncio.protocol import QuicConnectionProtocol
 from aioquic.quic.configuration import QuicConfiguration
 from aioquic.quic.connection import QuicConnection
-from aioquic.quic.events import QuicEvent, StreamDataReceived, HandshakeCompleted, ConnectionIdIssued
+from aioquic.quic.events import QuicEvent, StreamDataReceived, HandshakeCompleted, ConnectionIdIssued, \
+    ConnectionTerminated
 from aioquic.asyncio.server import QuicServer
-CONNECTED = False
 
 
 def get_transport_infos(transport) -> tuple:
@@ -50,6 +50,8 @@ class Quic(QuicConnectionProtocol, interfaces.EndpointAddress):
         self.transmit()
 
     def quic_event_received(self, event: QuicEvent) -> None:
+        if isinstance(event, ConnectionTerminated):
+            self.con = False
         if isinstance(event, ConnectionIdIssued):
             # print(event)
             pass
@@ -166,6 +168,7 @@ class QuicClient(interfaces.TokenInterface):
         if message.unresolved_remote is None:
             host = message.opt.uri_host
             port = message.opt.uri_port or self.default_port
+
             if host is None:
                 raise ValueError("No location found to send message to (neither in .opt.uri_host nor in .remote)")
         else:
@@ -199,14 +202,17 @@ class QuicClient(interfaces.TokenInterface):
             self.con = True
         except OSError:
             raise error.NetworkError("Connection failed to %r" % host)
-
+        self.protocol = protocol
         return protocol
 
     async def fill_or_recognize_remote(self, message):
-        if message.requested_scheme == self.scheme and not self.con:
-            message.remote = await self.connection(message)
-            print(message.remote)
+        if message.requested_scheme == self.scheme: #and not self.con:
+            if not self.con:
+                message.remote = await self.connection(message)
+            else:
+                message.remote = self.protocol
             return True
+
 
         if message.remote is not None \
                 and isinstance(message.remote, QuicConnectionProtocol) \
@@ -232,6 +238,10 @@ class QuicClient(interfaces.TokenInterface):
 
         return self
 
+    async def shutdown(self):
+        self.con = False
+        del self.tman
+
 class Server(interfaces.TokenInterface):
     def __init__(self):
         self.scheme = 'coap+quic'
@@ -241,8 +251,10 @@ class Server(interfaces.TokenInterface):
         self.default_port = COAP_PORT
 
     async def fill_or_recognize_remote(self, message):
-        #TODO
-        print(isinstance(message, QuicConnectionProtocol))
+        if message.remote is not None \
+                and isinstance(message.remote, QuicConnectionProtocol) \
+                and message.remote.ctx is self:
+            return True
         return False
 
     def send_message(self, message, message_monitor):

@@ -93,14 +93,14 @@ class _DatagramServerSocketSimple(asyncio.DatagramProtocol):
 
     @classmethod
     async def create(cls, bind, log, loop, message_interface: "GenericMessageInterface"):
-        if bind is None or bind[0] in ('::', '0.0.0.0', '', None):
+        #if bind is None or bind[0] in ('::', '0.0.0.0', '', None):
             # If you feel tempted to remove this check, think about what
             # happens if two configured addresses can both route to a
             # requesting endpoint, how that endpoint is supposed to react to a
             # response from the other address, and if that case is not likely
             # to ever happen in your field of application, think about what you
             # tell the first user where it does happen anyway.
-            raise ValueError("The transport can not be bound to any-address.")
+            #raise ValueError("The transport can not be bound to any-address.")
 
         ready = asyncio.get_running_loop().create_future()
 

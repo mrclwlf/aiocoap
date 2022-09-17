@@ -7,6 +7,7 @@ from aiocoap import *
 import time
 import argparse
 
+
 class Timer():
     def __init__(self):
         self._start_time = None
@@ -29,11 +30,14 @@ class Timer():
         self._start_time = None
         return elapsed_time
 
+
 async def main():
     transport = await Context.create_client_context()
+    PSK = b'MyKey'
+    identity = b'test-client'
 
     parser = argparse.ArgumentParser(description='Arguments to create a CoAP-Message.')
-    parser.add_argument("-p", "--protocol", help="coap, tcp, quic")
+    parser.add_argument("-p", "--protocol", help="coap, coaps, tcp, quic, coaps+tcp")
     parser.add_argument("-c", "--code", help="get, put, post, delete")
     parser.add_argument("-pl", "--payload", help="insert your payload")
     args = parser.parse_args()
@@ -45,8 +49,19 @@ async def main():
         case "quic":
             uri = 'coap+quic://localhost:64999/example'
 
+        case "dtls":
+            transport.client_credentials.load_from_dict({'coaps://localhost/*': {
+                "dtls": {"psk": PSK, "client-identity": identity}}})
+            uri = 'coaps://localhost/example'
+
+        case "coaps+tcp":
+            from aiocoap.credentials import TLSCert
+            transport.client_credentials['coaps+tcp://*'] = TLSCert(certfile="cert.pem")
+            uri = 'coaps+tcp://localhost/example'
+
         case _:
             uri = 'coap://localhost/example'
+
 
     match args.code:
         case "put":
@@ -58,7 +73,6 @@ async def main():
         case _:
             code = GET
 
-
     if args.payload is None:
         payload = b''
     else:
@@ -67,15 +81,16 @@ async def main():
     t = Timer()
     t.start()
     for i in range(0, 102):
-        #if i < 2:
-            #continue
-        #if i == 2:
-            #t.start()
+        # if i < 2:
+        # continue
+        # if i == 2:
+        # t.start()
         request = Message(code=code, uri=uri, payload=payload)
         response = await transport.request(request).response
     #print(response.payload)
-    #print(t.stop())
-
+    print(t.stop())
 
 if __name__ == "__main__":
     asyncio.run(main())
+    #loop = asyncio.get_event_loop()
+    #loop.run_until_complete(main())

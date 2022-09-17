@@ -43,6 +43,7 @@ from .. import error, interfaces
 from . import simplesocketserver
 from .simplesocketserver import _DatagramServerSocketSimple
 from ..util.asyncio import py38args
+import DTLSSocket
 
 from .tinydtls import LEVEL_NOALERT, LEVEL_FATAL, DTLS_EVENT_CONNECT, DTLS_EVENT_CONNECTED, CODE_CLOSE_NOTIFY, CloseNotifyReceived, DTLS_TICKS_PER_SECOND, DTLS_CLOCK_OFFSET, FatalDTLSError
 
@@ -56,11 +57,15 @@ _SENTINEL_PORT = 1234
 # packets from sending in rapid succession
 _SEND_SLEEP_WORKAROUND = 0
 
+#DTLSSocket.dtls.setLogLevel(DTLSSocket.dtls.DTLS_LOG_DEBUG)
+
 class _AddressDTLS(interfaces.EndpointAddress):
     # no slots here, thus no equality other than identity, which is good
 
     def __init__(self, protocol, underlying_address):
         from DTLSSocket import dtls
+
+
 
         self._protocol = protocol
         self._underlying_address = simplesocketserver._Address(protocol, underlying_address)
@@ -237,6 +242,7 @@ class SecurityStore:
 
     def __init__(self, server_credentials):
         self._server_credentials = server_credentials
+
 
         self._claims = None
 

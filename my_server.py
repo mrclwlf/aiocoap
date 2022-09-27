@@ -2,9 +2,12 @@ import asyncio
 import logging
 import os
 import ssl
+import json
 
 import aiocoap
 import aiocoap.resource as resource
+from aiocoap.credentials import CredentialsMap
+
 
 class ExamleResource(resource.Resource):
 
@@ -32,8 +35,10 @@ class ExamleResource(resource.Resource):
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("coap-server")
 logger.setLevel(logging.DEBUG)
-#handler = logging.FileHandler('mylog.log')
-#logger.addHandler(handler)
+
+
+# handler = logging.FileHandler('mylog.log')
+# logger.addHandler(handler)
 
 async def main():
     os.environ['AIOCOAP_DTLSSERVER_ENABLED'] = str(True)
@@ -54,14 +59,18 @@ async def main():
     if hasattr(ssl_context, 'sni_callback'):  # starting python 3.7
         ssl_context.sni_callback = lambda obj, name, context: setattr(obj, "indicated_server_name", name)
 
+    server_credentials = CredentialsMap()
+    server_credentials.load_from_dict(json.load(open("server.json", "rb")))
+    from aiocoap.oscore_sitewrapper import OscoreSiteWrapper
+    site = OscoreSiteWrapper(root, server_credentials)
 
-    server = await aiocoap.Context.create_server_context(root, _ssl_context=ssl_context)
+    server = await aiocoap.Context.create_server_context(site, _ssl_context=ssl_context,
+                                                         server_credentials=server_credentials)
     server.server_credentials.load_from_dict(
-        {':client': {"dtls": {"psk": PSK, "client-identity":  identity}}})
+        {':client': {"dtls": {"psk": PSK, "client-identity": identity}}})
 
     print("Server is ready!")
     await asyncio.get_running_loop().create_future()
-
 
 
 if __name__ == "__main__":

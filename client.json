@@ -1,0 +1,3 @@
+{
+  "coap://localhost/*": { "oscore": { "contextfile": "oscore_settings/client" } }
+}

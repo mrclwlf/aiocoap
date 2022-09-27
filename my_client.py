@@ -37,7 +37,7 @@ async def main():
     identity = b'test-client'
 
     parser = argparse.ArgumentParser(description='Arguments to create a CoAP-Message.')
-    parser.add_argument("-p", "--protocol", help="coap, coaps, tcp, quic, coaps+tcp")
+    parser.add_argument("-p", "--protocol", help="coap, coaps, tcp, quic, coaps+tcp, oscore")
     parser.add_argument("-c", "--code", help="get, put, post, delete")
     parser.add_argument("-pl", "--payload", help="insert your payload")
     args = parser.parse_args()
@@ -58,6 +58,11 @@ async def main():
             from aiocoap.credentials import TLSCert
             transport.client_credentials['coaps+tcp://*'] = TLSCert(certfile="cert.pem")
             uri = 'coaps+tcp://localhost/example'
+
+        case "oscore":
+            import json
+            transport.client_credentials.load_from_dict(json.load(open("client.json", "rb")))
+            uri = 'coap://localhost/example'
 
         case _:
             uri = 'coap://localhost/example'

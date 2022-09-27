@@ -1,5 +1,44 @@
 #!/bin/bash
 
+if test ! -d ./data; then
+  mkdir "data"
+fi
+
+if test ! -d ./results; then
+  mkdir "results"
+fi
+
+if test ! -f ./data/test_data_01_1MB; then
+  fallocate -l 1MB ./data/test_data_01_1MB
+fi
+
+if test ! -f ./data/test_data_02_5MB; then
+  fallocate -l 5MB ./data/test_data_02_5MB
+fi
+
+if test ! -f ./data/test_data_03_50MB; then
+  fallocate -l 5MB ./data/test_data_03_50MB
+fi
+
+if test ! -f ./data/test_data_04_100MB; then
+  fallocate -l 5MB ./data/test_data_04_100MB
+fi
+
+if test ! -f ./data/test_data_05_250MB; then
+  fallocate -l 5MB ./data/test_data_05_250MB
+fi
+
+if test ! -f ./data/test_data_06_500MB; then
+  fallocate -l 5MB ./data/test_data_06_500MB
+fi
+
+for file in ./data/*
+do
+    if [[ -f $file ]]; then
+        echo $file
+    fi
+done
+
 echo TCP Connection:
 python my_client.py -p tcp -c get
 
@@ -14,3 +53,5 @@ python my_client.py -p dtls -c get
 
 echo UDP Connection:
 python my_client.py -p udp -c get
+
+

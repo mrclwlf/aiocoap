@@ -128,6 +128,27 @@ class Quic(QuicConnectionProtocol, interfaces.EndpointAddress):
         self.key = None
         self._remote_settings = None
 
+    def abort(self, errormessage=None, bad_csm_option=None):
+        self.log.warning("Aborting connection: %s", errormessage)
+        abort_msg = Message(code=ABORT)
+        if errormessage is not None:
+            abort_msg.payload = errormessage.encode('utf8')
+        if bad_csm_option is not None:
+            bad_csm_option_option = optiontypes.UintOption(2, bad_csm_option)
+            abort_msg.opt.add_option(bad_csm_option_option)
+        self._abort_with(abort_msg)
+
+    def _abort_with(self, abort_msg):
+        if self._transport is not None:
+            self.send_data(abort_msg)
+            self._transport.close()
+        else:
+            # FIXME: find out how this happens; i've only seen it after nmap
+            # runs against an aiocoap server and then shutting it down.
+            # "poisoning" the object to make sure this can not be exploited to
+            # bypass the server shutdown.
+            self._ctx = None
+
 
     def _send_initial_csm(self):
         csm = Message(code=CSM)

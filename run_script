@@ -1,5 +1,15 @@
 #!/bin/bash
 
+# In case you got no key and cert use:
+# openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 100 -nodes
+# and state your hostname (eg. localhost) when asked for the Common Name.
+# Leave everything else empty
+
+delay=("0ms" "5ms" "10ms" "20ms" "40ms")
+protocol=("tcp" "quic" "coap" "coaps+tcp" "coap+dtls")
+resources=("01_resource" "02_resource" "03_resource" "04_resource" "05_resource" "06_resource")
+packetLoss=("0%" "0.01%" "0.1%" "1%" "5%" "7.5%")
+
 if test ! -d ./data; then
   mkdir "data"
 fi
@@ -8,50 +18,139 @@ if test ! -d ./results; then
   mkdir "results"
 fi
 
+if test ! -d ./results/coap; then
+  mkdir -p "results/coap/data"
+  mkdir "results/coap/pcap"
+fi
+
+if test ! -d ./results/coap+dtls; then
+  mkdir -p "results/coap+dtls/data"
+  mkdir "results/coap+dtls/pcap"
+fi
+
+if test ! -d ./results/tcp; then
+  mkdir -p "results/tcp/data"
+  mkdir "results/tcp/pcap"
+fi
+
+if test ! -d ./results/coaps+tcp; then
+  mkdir -p "results/coaps+tcp/data"
+  mkdir "results/coaps+tcp/pcap"
+fi
+
+if test ! -d ./results/quic; then
+  mkdir -p "results/quic/data"
+  mkdir "results/quic/pcap"
+fi
+
 if test ! -f ./data/test_data_01_1MB; then
-  fallocate -l 1MB ./data/test_data_01_1MB
+  fallocate -l 50KB ./data/test_data_01_1MB
 fi
 
 if test ! -f ./data/test_data_02_5MB; then
-  fallocate -l 5MB ./data/test_data_02_5MB
+  fallocate -l 125KB ./data/test_data_02_5MB
 fi
 
 if test ! -f ./data/test_data_03_50MB; then
-  fallocate -l 5MB ./data/test_data_03_50MB
+  fallocate -l 250KB ./data/test_data_03_50MB
 fi
 
 if test ! -f ./data/test_data_04_100MB; then
-  fallocate -l 5MB ./data/test_data_04_100MB
+  fallocate -l 500KB ./data/test_data_04_100MB
 fi
 
 if test ! -f ./data/test_data_05_250MB; then
-  fallocate -l 5MB ./data/test_data_05_250MB
+  fallocate -l 750KB ./data/test_data_05_250MB
 fi
 
 if test ! -f ./data/test_data_06_500MB; then
-  fallocate -l 5MB ./data/test_data_06_500MB
+  fallocate -l 1MB ./data/test_data_06_500MB
 fi
 
-for file in ./data/*
-do
-    if [[ -f $file ]]; then
-        echo $file
-    fi
-done
+#Kill all runing servers
+getPid=$(pgrep -f "python my_server.py")
+if [ $getPid ]; then
+    kill $getPid
+fi
+python my_server.py >> /dev/null &
+ServerPID=$!
+sleep 1
+#sudo tcpdump -U  -i lo -vvv -w ./results/test.pcap &
+#sleep 2
+#start=$SECONDS
+#duration=$(( SECONDS - start ))
+#echo "${resources[0]}"
+#echo "$duration"
+#echo "Server PID: $ServerPID"
+#echo "Client PID: $ClientPID"
+#kill $ServerPID
+#wait $ServerPID
+#CapturePID=$(ps -e | pgrep tcpdump)
+#echo "$CapturePID"
 
-echo TCP Connection:
-python my_client.py -p tcp -c get
 
-echo QUIC Connection:
-python my_client.py -p quic -c get
+#sudo chmod 777 ./results/*
 
-echo DTLS Connection:
-python my_client.py -p dtls -c get
+#sudo tc qdisc add dev lo root netem loss 10% delay 20ms
 
-echo TCP with TLS
-python my_client.py -p dtls -c get
+#echo UDP Connection:
+#python my_client.py -p udp -c get -r "06_resource"
+#sleep 2
 
-echo UDP Connection:
-python my_client.py -p udp -c get
+#echo TCP Connection:
+#python my_client.py -p tcp -c get -r "06_resource"
+#sleep 2
+
+#echo QUIC Connection:
+#python my_client.py -p quic -c get -r "06_resource"
+#sleep 2
+
+#echo DTLS Connection:
+#python my_client.py -p coap+dtls -c get -r "06_resource"
+#sleep 2
+
+#echo TCP with TLS
+#python my_client.py -p coaps+tcp -c get -r "06_resource"
+#sleep 2
+
+for prtcl in ${protocol[@]}
+  do
+    for rsc in ${resources[@]}
+      do
+        for dly in ${delay[@]}
+          do
+            for pkl in ${packetLoss[@]}
+              do
+                sudo tc qdisc add dev lo root netem loss "$pkl" delay "$dly"
+                sudo tcpdump -U  -i lo -vvv -w ./results/$prtcl/pcap/"${rsc}_${prtcl}_${dly}_${pkl}.pcap" &
+                sleep 2
+                for i in {1..5}
+                  do
+                    python my_client.py -p "$prtcl" -c get -r "$rsc" >> ./results/$prtcl/data/"${rsc}_${prtcl}_${dly}_${pkl}"
+                  done
+                CapturePID=$(ps -e | pgrep tcpdump)
+                sleep 2
+                sudo kill -2 $CapturePID
+                sudo tc qdisc del dev lo root
+              done
+          done
+      done
+  done
+
+
+#sudo tc qdisc add dev lo root netem delay ${delay[4]}
+
+#sudo tc qdisc del dev lo root
+
+kill $ServerPID
+wait $ServerPID
+sudo chmod 777 ./results/*/pcap/*
+#CapturePID=$(ps -e | pgrep tcpdump)
+#sleep 2
+#sudo kill -2 $CapturePID
+echo "Done"
+
+
+
 
 

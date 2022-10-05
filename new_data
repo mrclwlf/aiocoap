@@ -1,0 +1,20 @@
+
+UDP Connection:
+CoAP
+801.4763996400034
+TCP Connection:
+TCP
+1.3779744820021733
+QUIC Connection:
+QUIC
+9.975756676001765
+DTLS Connection:
+Oct 04 21:16:09 WARN received alert, peer has been invalidated
+DTLS
+Error in close: -1
+Error in close: -1
+Error in close: -1
+TCP with TLS
+TLS+TCP
+0.148612190001586
+Done

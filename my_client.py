@@ -33,39 +33,51 @@ class Timer():
 
 async def main():
     transport = await Context.create_client_context()
-    PSK = b'MyKey'
+    psk = b'MyKey'
     identity = b'test-client'
 
     parser = argparse.ArgumentParser(description='Arguments to create a CoAP-Message.')
     parser.add_argument("-p", "--protocol", help="coap, coaps, tcp, quic, coaps+tcp, oscore")
     parser.add_argument("-c", "--code", help="get, put, post, delete")
     parser.add_argument("-pl", "--payload", help="insert your payload")
+    parser.add_argument("-r", "--resource", help="insert target resource")
     args = parser.parse_args()
+
+    rsc = args.resource if args.resource else "example"
 
     match args.protocol:
         case "tcp":
-            uri = 'coap+tcp://localhost/example'
+            uri = f'coap+tcp://localhost/{rsc}'
+            #print("TCP")
 
         case "quic":
-            uri = 'coap+quic://localhost:64999/example'
+            uri = f'coap+quic://localhost:64999/{rsc}'
+            #print("QUIC")
 
-        case "dtls":
+
+        case "coap+dtls":
             transport.client_credentials.load_from_dict({'coaps://localhost/*': {
-                "dtls": {"psk": PSK, "client-identity": identity}}})
-            uri = 'coaps://localhost/example'
+                "dtls": {"psk": psk, "client-identity": identity}}})
+            uri = f'coaps://localhost/{rsc}'
+            #print("DTLS")
+
 
         case "coaps+tcp":
             from aiocoap.credentials import TLSCert
             transport.client_credentials['coaps+tcp://*'] = TLSCert(certfile="cert.pem")
-            uri = 'coaps+tcp://localhost/example'
+            uri = f'coaps+tcp://localhost/example'
+            #print("TLS+TCP")
+
 
         case "oscore":
             import json
             transport.client_credentials.load_from_dict(json.load(open("client.json", "rb")))
-            uri = 'coap://localhost/example'
+            uri = f'coap://localhost/{rsc}'
 
         case _:
-            uri = 'coap://localhost/example'
+            uri = f'coap://localhost/{rsc}'
+            #print("CoAP")
+
 
 
     match args.code:
@@ -85,17 +97,11 @@ async def main():
 
     t = Timer()
     t.start()
-    for i in range(0, 102):
-        # if i < 2:
-        # continue
-        # if i == 2:
-        # t.start()
-        request = Message(code=code, uri=uri, payload=payload)
-        response = await transport.request(request).response
+    request = Message(code=code, uri=uri, payload=payload)
+    response = await transport.request(request).response
     #print(response.payload)
-    print(t.stop())
+    end_time = t.stop()
+    print(end_time)
 
 if __name__ == "__main__":
     asyncio.run(main())
-    #loop = asyncio.get_event_loop()
-    #loop.run_until_complete(main())

@@ -47,7 +47,51 @@ class Quic(QuicConnectionProtocol, interfaces.EndpointAddress):
         super().__init__(*args, **kwargs)
         self.data = b""
         self.key = None
+        self._remote_settings = None
 
+    def abort(self, errormessage=None, bad_csm_option=None):
+        abort_msg = Message(code=ABORT)
+        if errormessage is not None:
+            abort_msg.payload = errormessage.encode('utf8')
+        if bad_csm_option is not None:
+            bad_csm_option_option = optiontypes.UintOption(2, bad_csm_option)
+            abort_msg.opt.add_option(bad_csm_option_option)
+        if self._transport is not None:
+            self.send_data(abort_msg)
+            self.close()
+
+
+    def _process_signaling(self, msg):
+        if msg.code == CSM:
+            if self._remote_settings is None:
+                self._remote_settings = {}
+            for opt in msg.opt.option_list():
+                if opt.number == 2:
+                    self._remote_settings['max-message-size'] = int.from_bytes(opt.value, 'big')
+                elif opt.number == 4:
+                    self._remote_settings['block-wise-transfer'] = True
+                elif opt.number.is_critical():
+                    self.abort("Option not supported", bad_csm_option=opt.number)
+                else:
+                    pass
+        elif msg.code in (PING, PONG, RELEASE, ABORT):
+            for opt in msg.opt.option_list():
+                if opt.number.is_critical():
+                    self.abort("Unknown critical option")
+                else:
+                    pass
+
+            if msg.code == PING:
+                pong = Message(code=PONG, token=msg.token)
+                self.send_data(pong)
+            elif msg.code == PONG:
+                pass
+            elif msg.code == RELEASE:
+                raise NotImplementedError
+            elif msg.code == ABORT:
+                raise NotImplementedError
+            else:
+                self.abort("Unknown signalling code")
 
     def _send_initial_csm(self):
         csm = Message(code=CSM)
@@ -71,8 +115,8 @@ class Quic(QuicConnectionProtocol, interfaces.EndpointAddress):
             # print(event)
             pass
         if isinstance(event, HandshakeCompleted):
-            #self._send_initial_csm()
             self.key = get_transport_infos(self._transport)
+            self._send_initial_csm()
         if isinstance(event, StreamDataReceived):
             self.data += event.data
 
@@ -94,12 +138,20 @@ class Quic(QuicConnectionProtocol, interfaces.EndpointAddress):
                 try:
                     message = tcp._decode_message(message)
                 except error.UnparsableMessage:
+                    self.abort("Failed to parse message")
                     return
                 message.remote = self
 
 
                 self.ctx.log.debug("Received message: %r", message)
                 self.data = self.data[msglen:]
+
+                if message.code.is_signalling():
+                    self._process_signaling(message)
+                    continue
+
+                if self._remote_settings is None:
+                    self._remote_settings['max-message-size'] = 1024 * 1024
 
                 self.dispatch_incoming(message)
 

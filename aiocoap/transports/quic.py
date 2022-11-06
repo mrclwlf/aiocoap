@@ -151,7 +151,7 @@ class Quic(QuicConnectionProtocol, interfaces.EndpointAddress):
                     continue
 
                 if self._remote_settings is None:
-                    self._remote_settings['max-message-size'] = 1024 * 1024
+                    self._remote_settings = {'max-message-size': 1024 * 1024}
 
                 self.dispatch_incoming(message)
 
@@ -332,7 +332,7 @@ class Server(interfaces.TokenInterface):
         bind = (bind[0], bind[1] + (self.default_port - COAP_PORT) if bind[1] else self.default_port)
         config = QuicConfiguration(is_client=False, alpn_protocols='coap')
         config.load_cert_chain("aiocoap/ssl_cert.pem", "aiocoap/ssl_key.pem")
-        config.secrets_log_file = open("my.log","w")
+        config.secrets_log_file = open("quic_session_keys.log", "w")
 
         PORT = 5684
         PORT = 64999
